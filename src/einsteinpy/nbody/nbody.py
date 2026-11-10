@@ -1,4 +1,3 @@
-
 """N-Body numerical computation.
 
 Unlike :py:mod:`~einsteinpy.geodesic`, which propagates a single test
@@ -18,13 +17,22 @@ import numpy as np
 from astropy import units as u
 from scipy.integrate import solve_ivp
 
+from einsteinpy.bodies import Body
 from einsteinpy.constant import G, c
 from einsteinpy.coordinates.differential import CartesianDifferential
 
-__all__ = ["NBody"]
+from .body import InvalidBodyError
+
+__all__ = ["NBody", "InvalidBodyError"]
 
 _G = G.value
 _c = c.value
+
+
+def _to_seconds(value):
+    if hasattr(value, "to"):
+        return float(value.to(u.s).value)
+    return float(value)
 
 
 class NBody:
@@ -37,7 +45,8 @@ class NBody:
 
     """
 
-    def __init__(self, bodies, t=0.0 * u.s, softening_length=0.0 * u.m):
+    def __init__(self, bodies, t=0.0 * u.s, softening_length=0.0 * u.m,
+                 pn_correction=False):
         """
         Constructor
 
@@ -55,39 +64,46 @@ class NBody:
             Plummer softening length, used to avoid numerical divergences
             during close encounters between bodies.
             Defaults to ``0 m`` (no softening).
+        pn_correction : bool, optional
+            Whether to include the first-order Post-Newtonian (1PN)
+            correction by default.
+            Defaults to ``False``.
 
         Raises
         ------
-        ValueError
-            If less than two bodies are supplied, or if any body is missing
-            Cartesian coordinates.
-        TypeError
-            If any body does not carry a
-            :py:class:`~einsteinpy.coordinates.differential.CartesianDifferential`.
+        InvalidBodyError
+            If less than two bodies are supplied, if any body is not a
+            ``Body`` instance, or if any body is missing Cartesian
+            coordinates.
 
         """
-        if len(bodies) <= 1:
-            raise ValueError(
+        try:
+            body_list = list(bodies)
+        except TypeError:
+            raise InvalidBodyError("bodies must be an iterable of Body objects.")
+
+        if len(body_list) <= 1:
+            raise InvalidBodyError(
                 "NBody requires a list of more than one Body object. "
-                f"Got {len(bodies)} bodies."
+                f"Got {len(body_list)} bodies."
             )
 
-        for body in bodies:
-            if body.coords is None:
-                raise ValueError(
-                    f"Body '{body.name}' has no coordinates defined. "
-                    "Every body must carry a CartesianDifferential."
+        for body in body_list:
+            if not isinstance(body, Body):
+                raise InvalidBodyError(
+                    f"Expected a Body instance, got {type(body).__name__}."
                 )
             if not isinstance(body.coords, CartesianDifferential):
-                raise TypeError(
+                raise InvalidBodyError(
                     f"Body '{body.name}' must carry a CartesianDifferential, "
                     f"so that all bodies share a common Cartesian frame. "
-                    f"Got {type(body.coords).__name__}."
+                    f"Got {type(body.coords).__name__ if body.coords is not None else None}."
                 )
 
-        self.bodies = list(bodies)
+        self.bodies = list(body_list)
         self.t = t
         self.softening_length = softening_length
+        self.pn_correction = bool(pn_correction)
 
         self._masses = np.array(
             [body.mass.to(u.kg).value for body in self.bodies], dtype=float
@@ -132,14 +148,14 @@ class NBody:
     def trajectory(self):
         """
         Returns the trajectory of the system, as computed by the last call to
-        :py:meth:`~einsteinpy.nbody.nbody.NBody.calculate_trajectory`.
+        :py:meth:`~einsteinpy.nbody.nbody.NBody.simulate`.
 
         Returns
         -------
         ~numpy.ndarray or None
             ``None``, if no trajectory has been computed yet. Otherwise, a
             tuple ``(t, states)``, as described in
-            :py:meth:`~einsteinpy.nbody.nbody.NBody.calculate_trajectory`.
+            :py:meth:`~einsteinpy.nbody.nbody.NBody.simulate`.
 
         """
         return self._trajectory
@@ -225,31 +241,27 @@ class NBody:
 
         return np.concatenate((velocities.ravel(), acc.ravel()))
 
-    def calculate_trajectory(
+    def simulate(
         self,
-        end_time=1.0 * u.s,
+        end_time,
         steps=50,
-        post_newtonian=False,
         method="RK45",
         rtol=1e-8,
         atol=1e-10,
+        post_newtonian=None,
     ):
         """
         Calculate the trajectories of all bodies in the system.
 
         Parameters
         ----------
-        end_time : ~astropy.units.quantity.Quantity, optional
+        end_time : ~astropy.units.quantity.Quantity or float, optional
             Coordinate time, up to which, the system should be evolved
             (measured from the initial time ``t``).
             Defaults to ``1 s``.
         steps : int, optional
             Number of time steps, at which the state is reported.
             Defaults to ``50``.
-        post_newtonian : bool, optional
-            Whether to include the first-order Post-Newtonian (1PN)
-            correction, capturing leading order General Relativistic effects.
-            Defaults to ``False`` (pure Newtonian dynamics).
         method : str, optional
             Integration method to pass to
             :py:func:`scipy.integrate.solve_ivp`.
@@ -260,6 +272,9 @@ class NBody:
         atol : float, optional
             Absolute tolerance for the integrator.
             Defaults to ``1e-10``.
+        post_newtonian : bool, optional
+            Whether to include the first-order Post-Newtonian (1PN)
+            correction. Defaults to the value set at construction.
 
         Returns
         -------
@@ -270,9 +285,13 @@ class NBody:
             each body, the state ``(x, y, z, v_x, v_y, v_z)`` in SI units.
 
         """
+        if post_newtonian is None:
+            post_newtonian = self.pn_correction
+
         n = len(self.bodies)
-        t0 = self.t.to(u.s).value
-        t1 = t0 + end_time.to(u.s).value
+        t0 = _to_seconds(self.t)
+        dt = _to_seconds(end_time)
+        t1 = t0 + dt
 
         y0 = np.concatenate(
             (self._positions.ravel(), self._velocities.ravel())
@@ -288,7 +307,7 @@ class NBody:
             t_eval=t_eval,
             rtol=rtol,
             atol=atol,
-            args=(post_newtonian,),
+            args=(bool(post_newtonian),),
         )
 
         if not sol.success:
@@ -299,9 +318,36 @@ class NBody:
         states = sol.y.T.reshape(-1, 2, n, 3)
         states = np.concatenate((states[:, 0], states[:, 1]), axis=2)
 
-        self._trajectory = (sol.t, states)
+        times = np.asarray(sol.t, dtype=float)
+        results = np.asarray(states, dtype=float)
+
+        # sync internal state to final
+        final = results[-1]
+        self._positions = np.array(final[:, :3], dtype=float)
+        self._velocities = np.array(final[:, 3:], dtype=float)
+        self.t = (t1) * u.s
+
+        # sync body objects
+        for idx, body in enumerate(self.bodies):
+            coords = CartesianDifferential(
+                self.t,
+                self._positions[idx, 0] * u.m,
+                self._positions[idx, 1] * u.m,
+                self._positions[idx, 2] * u.m,
+                self._velocities[idx, 0] * u.m / u.s,
+                self._velocities[idx, 1] * u.m / u.s,
+                self._velocities[idx, 2] * u.m / u.s,
+            )
+            body.coords = coords
+            body.pos_vec = [coords.x, coords.y, coords.z]
+            body.vel_vec = [coords.v_x, coords.v_y, coords.v_z]
+
+        self._trajectory = (times, results)
 
         return self._trajectory
+
+    def calculate_trajectory(self, *args, **kwargs):
+        return self.simulate(*args, **kwargs)
 
     def kinetic_energy(self, positions=None, velocities=None):
         """
