@@ -457,3 +457,79 @@ class BaseRelativityTensor(Tensor):
             functions=self.functions,
             name=_change_name(self.name, context="__lt"),
         )
+    
+    def parallel_transport(self, curve, christoffel, tangent, lambd):
+        r"""
+        Performs the symbolic parallel transport of this tensor (a vector)
+        along a curve, according to
+
+        .. math::
+
+            \frac{dV^\mu}{d\lambda} + \Gamma^\mu_{\nu\rho} V^\nu u^\rho = 0
+
+        where :math:`u^\mu = dq^\mu/d\lambda` is the tangent to the curve and
+        :math:`\Gamma^\mu_{\nu\rho}` are the Christoffel symbols of the second
+        kind. This method returns the left hand side of the above equation,
+        which vanishes when the vector is parallel transported.
+
+        Parameters
+        ----------
+        curve : tuple or list
+            Parametrization of the curve, ``q^\mu(\lambda)``, i.e. the
+            space-time coordinates expressed as functions of ``lambd``.
+        christoffel : ~einsteinpy.symbolic.christoffel.ChristoffelSymbols
+            Christoffel Symbols of the second kind (config ``ull``) for the
+            space-time along which the vector is transported.
+        tangent : ~einsteinpy.symbolic.tensor.BaseRelativityTensor or list or tuple
+            Tangent vector :math:`u^\rho = dq^\rho/d\lambda` to the curve.
+        lambd : ~sympy.core.symbol.Symbol
+            Affine parameter :math:`\lambda` along the curve.
+
+        Returns
+        -------
+        ~einsteinpy.symbolic.tensor.BaseRelativityTensor
+            Tensor of order 1 representing the left hand side of the parallel
+            transport equation. It vanishes identically when the vector is
+            parallel transported along the curve.
+
+        Raises
+        ------
+        ValueError
+            Raised when this tensor is not a contravariant vector (config 'u').
+
+        """
+        if not self.config == "u":
+            raise ValueError(
+                "parallel_transport is only defined for a contravariant vector (config 'u')"
+            )
+
+        chris = christoffel.tensor()
+
+        if isinstance(tangent, BaseRelativityTensor):
+            u = tangent.tensor()
+        else:
+            u = sympy.Array(tangent)
+
+        vec = self.tensor()
+        subs_list = list(zip(self.syms, curve))
+        dims = self.dims
+
+        result = list()
+        for mu in range(dims):
+            expr = sympy.diff(vec[mu].subs(subs_list), lambd)
+            for nu in range(dims):
+                for rho in range(dims):
+                    expr += chris[mu, nu, rho].subs(subs_list) * vec[nu].subs(
+                        subs_list
+                    ) * u[rho]
+            result.append(simplify(expr))
+
+        return BaseRelativityTensor(
+            result,
+            syms=self.syms,
+            config="u",
+            parent_metric=self.parent_metric,
+            variables=self.variables,
+            functions=self.functions,
+            name=_change_name(self.name, context="__parallel_transport"),
+        )

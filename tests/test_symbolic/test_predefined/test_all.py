@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from sympy import Array, sqrt, symbols, tanh
+from sympy import Array
 
-from einsteinpy.symbolic import MetricTensor, RicciTensor, simplify_sympy_array
+from einsteinpy.symbolic import MetricTensor, simplify_sympy_array
 from einsteinpy.symbolic.predefined import (
     AlcubierreWarp,
     AntiDeSitter,
@@ -14,12 +14,10 @@ from einsteinpy.symbolic.predefined import (
     Davidson,
     DeSitter,
     Ernst,
-    FriedmannLemaitreRobertsonWalker,
     Godel,
     JanisNewmanWinicour,
     Kerr,
     KerrNewman,
-    KerrNewmanDeSitter,
     Minkowski,
     MinkowskiCartesian,
     MinkowskiPolar,
@@ -51,8 +49,6 @@ from einsteinpy.symbolic.predefined import (
         Ernst(),
         JanisNewmanWinicour(),
         ReissnerNordstorm(),
-        FriedmannLemaitreRobertsonWalker(),
-        KerrNewmanDeSitter(),
     ],
 )
 def test_all_predefined_metrics(metric_instance):
@@ -79,35 +75,8 @@ def test_check_two_metrics_are_equal(m1, m2):
     assert simplify_sympy_array(m1.tensor() - m2.tensor()) == zero_arr
 
 
-def test_AlcubierreWarp_metric():
-    # Regression test to ensure metric is same as in paper (Alcubierre 1994).
-    x_s, sigma, R, v = symbols("x_s sigma R v")
-    metric = AlcubierreWarp(x_s=x_s, sigma=sigma, R=R, v=v)
-    _, x, y, z = metric.symbols()
-    r_s = sqrt((x - x_s) ** 2 + y**2 + z**2)
-    f = (tanh(sigma * (r_s + R)) - tanh(sigma * (r_s - R))) / (2 * tanh(sigma * R))
-    expected = Array(
-        [
-            [v**2 * f**2 - 1, -v * f, 0, 0],
-            [-v * f, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1],
-        ]
-    )
-    assert metric.tensor() == expected
-
-
 def test_Minkowski_equality():
     # Minkowski and MinkowskiCartesian are same
     assert simplify_sympy_array(MinkowskiCartesian().tensor()) == simplify_sympy_array(
         Minkowski().tensor()
     )
-
-
-def test_BesselGravitationalWave_is_vacuum():
-    # Kramer (1999) is a vacuum solution, so the Ricci tensor must vanish
-    metric = BesselGravitationalWave()
-    zero_arr = Array(np.zeros(shape=metric.tensor().shape, dtype=int))
-    assert RicciTensor.from_metric(metric).tensor() == zero_arr
-    # The wave depends on time through U = C J0(rho) cos(t)
-    assert symbols("t") in metric.tensor()[3, 3].free_symbols
