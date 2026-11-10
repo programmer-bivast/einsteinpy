@@ -157,41 +157,29 @@ class GeodesicIntegrator:
         g = self.metric
         g_prms = self.metric_params
 
-        HA1 = np.array(
-            [
-                q1,
-                _flow_A(g, g_prms, q1, p1, q2, p2, 0.5 * dl)[1],
-                _flow_A(g, g_prms, q1, p1, q2, p2, 0.5 * dl)[0],
-                p2,
-            ]
-        )
-        HB1 = np.array(
-            [
-                _flow_B(g, g_prms, HA1[0], HA1[1], HA1[2], HA1[3], 0.5 * dl)[0],
-                HA1[1],
-                HA1[2],
-                _flow_B(g, g_prms, HA1[0], HA1[1], HA1[2], HA1[3], 0.5 * dl)[1],
-            ]
-        )
+        fa1 = _flow_A(g, g_prms, q1, p1, q2, p2, 0.5 * dl)
+        HA1 = np.array([q1, fa1[1], fa1[0], p2])
+
+        fb1 = _flow_B(g, g_prms, HA1[0], HA1[1], HA1[2], HA1[3], 0.5 * dl)
+        HB1 = np.array([fb1[0], HA1[1], HA1[2], fb1[1]])
+
         HC = _flow_mixed(HB1[0], HB1[1], HB1[2], HB1[3], dl, omg)
-        HB2 = np.array(
-            [
-                _flow_B(g, g_prms, HC[0], HC[1], HC[2], HC[3], 0.5 * dl)[0],
-                HC[1],
-                HC[2],
-                _flow_B(g, g_prms, HC[0], HC[1], HC[2], HC[3], 0.5 * dl)[1],
-            ]
-        )
-        HA2 = np.array(
-            [
-                HB2[0],
-                _flow_A(g, g_prms, HB2[0], HB2[1], HB2[2], HB2[3], 0.5 * dl)[1],
-                _flow_A(g, g_prms, HB2[0], HB2[1], HB2[2], HB2[3], 0.5 * dl)[0],
-                HB2[3],
-            ]
-        )
+
+        fb2 = _flow_B(g, g_prms, HC[0], HC[1], HC[2], HC[3], 0.5 * dl)
+        HB2 = np.array([fb2[0], HC[1], HC[2], fb2[1]])
+
+        fa2 = _flow_A(g, g_prms, HB2[0], HB2[1], HB2[2], HB2[3], 0.5 * dl)
+        HA2 = np.array([HB2[0], fa2[1], fa2[0], HB2[3]])
 
         return HA2
+
+    def _ord_n(self, prev_ord_func, q1, p1, q2, p2, delta):
+        Z0, Z1 = _Z(self.order)
+        step1 = prev_ord_func(q1, p1, q2, p2, delta * Z1)
+        step2 = prev_ord_func(step1[0], step1[1], step1[2], step1[3], delta * Z0)
+        step3 = prev_ord_func(step2[0], step2[1], step2[2], step2[3], delta * Z1)
+
+        return step3
 
     def _ord_4(self, q1, p1, q2, p2, delta):
         """
@@ -205,14 +193,7 @@ class GeodesicIntegrator:
             `DOI: <https://doi.org/10.1016/0375-9601(90)90092-3>`__
 
         """
-        dl = delta
-
-        Z0, Z1 = _Z(self.order)
-        step1 = self._ord_2(q1, p1, q2, p2, dl * Z1)
-        step2 = self._ord_2(step1[0], step1[1], step1[2], step1[3], dl * Z0)
-        step3 = self._ord_2(step2[0], step2[1], step2[2], step2[3], dl * Z1)
-
-        return step3
+        return self._ord_n(self._ord_2, q1, p1, q2, p2, delta)
 
     def _ord_6(self, q1, p1, q2, p2, delta):
         """
@@ -226,14 +207,7 @@ class GeodesicIntegrator:
             `DOI: <https://doi.org/10.1016/0375-9601(90)90092-3>`__
 
         """
-        dl = delta
-
-        Z0, Z1 = _Z(self.order)
-        step1 = self._ord_4(q1, p1, q2, p2, dl * Z1)
-        step2 = self._ord_4(step1[0], step1[1], step1[2], step1[3], dl * Z0)
-        step3 = self._ord_4(step2[0], step2[1], step2[2], step2[3], dl * Z1)
-
-        return step3
+        return self._ord_n(self._ord_4, q1, p1, q2, p2, delta)
 
     def _ord_8(self, q1, p1, q2, p2, delta):
         """
@@ -247,14 +221,7 @@ class GeodesicIntegrator:
             `DOI: <https://doi.org/10.1016/0375-9601(90)90092-3>`__
 
         """
-        dl = delta
-
-        Z0, Z1 = _Z(self.order)
-        step1 = self._ord_6(q1, p1, q2, p2, dl * Z1)
-        step2 = self._ord_6(step1[0], step1[1], step1[2], step1[3], dl * Z0)
-        step3 = self._ord_6(step2[0], step2[1], step2[2], step2[3], dl * Z1)
-
-        return step3
+        return self._ord_n(self._ord_6, q1, p1, q2, p2, delta)
 
     def step(self):
         """

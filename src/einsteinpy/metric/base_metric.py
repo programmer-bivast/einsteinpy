@@ -113,14 +113,7 @@ class BaseMetric:
             Charge: ({self.Q}),\n\
             Schwarzschild Radius: ({self.sch_rad})\n)"
 
-    def __repr__(self):
-        return f"(\n\
-            Name: ({self.name}),\n\
-            Coordinates: ({self.coords}),\n\
-            Mass: ({self.M}),\n\
-            Spin parameter: ({self.a}),\n\
-            Charge: ({self.Q}),\n\
-            Schwarzschild Radius: ({self.sch_rad})\n)"
+    __repr__ = __str__
 
     @staticmethod
     def sigma(r, theta, M, a):

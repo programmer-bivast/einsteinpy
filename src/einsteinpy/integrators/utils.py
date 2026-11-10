@@ -126,27 +126,7 @@ def _flow_B(g, g_prms, q1, p1, q2, p2, delta=0.5):
         `2021 ApJ 909 67 <https://doi.org/10.3847/1538-4357/abdc28>`__
 
     """
-    dH2 = [
-        0.5
-        * (
-            _PartHamFlow(
-                g,
-                g_prms,
-                q2,
-                p1,
-                i,
-            )
-        )
-        for i in range(4)
-    ]
-    dp2 = np.array(dH2)
-    p2_next = p2 - delta * dp2
-
-    dH1 = g(q2, *g_prms) @ p1
-    dq1 = np.array(dH1)
-    q1_next = q1 + delta * dq1
-
-    return q1_next, p2_next
+    return _flow_A(g, g_prms, q2, p2, q1, p1, delta=delta)
 
 
 def _flow_mixed(q1, p1, q2, p2, delta=0.5, omega=1.0):

@@ -21,10 +21,7 @@ def cartesian_to_spherical(t, x, y, z, v_x, v_y, v_z):
     This function should eventually result in Coordinate Transformation Graph!
 
     """
-    hxy = np.hypot(x, y)
-    r = np.hypot(hxy, z)
-    theta = np.arctan2(hxy, z)
-    phi = np.arctan2(y, x)
+    t, r, theta, phi = cartesian_to_spherical_novel(t, x, y, z)
     n1 = x**2 + y**2
     n2 = n1 + z**2
     v_r = (x * v_x + y * v_y + z * v_z) / np.sqrt(n2)
@@ -65,9 +62,7 @@ def cartesian_to_bl(t, x, y, z, alpha, v_x, v_y, v_z):
 
     """
     w = (x**2 + y**2 + z**2) - (alpha**2)
-    r = np.sqrt(0.5 * (w + np.sqrt((w**2) + (4 * (alpha**2) * (z**2)))))
-    theta = np.arccos(z / r)
-    phi = np.arctan2(y, x)
+    t, r, theta, phi = cartesian_to_bl_novel(t, x, y, z, alpha)
     dw_dt = 2 * (x * v_x + y * v_y + z * v_z)
     v_r = (1 / (2 * r)) * (
         (dw_dt / 2)
@@ -112,9 +107,7 @@ def spherical_to_cartesian(t, r, th, p, v_r, v_th, v_p):
     This function should eventually result in Coordinate Transformation Graph!
 
     """
-    x = r * np.cos(p) * np.sin(th)
-    y = r * np.sin(p) * np.sin(th)
-    z = r * np.cos(th)
+    t, x, y, z = spherical_to_cartesian_novel(t, r, th, p)
     v_x = (
         np.sin(th) * np.cos(p) * v_r
         - r * np.sin(th) * np.sin(p) * v_p
@@ -160,10 +153,7 @@ def bl_to_cartesian(t, r, th, p, alpha, v_r, v_th, v_p):
 
     """
     xa = np.sqrt(r**2 + alpha**2)
-    sin_norm = xa * np.sin(th)
-    x = sin_norm * np.cos(p)
-    y = sin_norm * np.sin(p)
-    z = r * np.cos(th)
+    t, x, y, z = bl_to_cartesian_novel(t, r, th, p, alpha)
     v_x = (
         (r * v_r * np.sin(th) * np.cos(p) / xa)
         + (xa * np.cos(th) * np.cos(p) * v_th)

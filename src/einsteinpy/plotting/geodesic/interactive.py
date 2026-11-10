@@ -5,6 +5,8 @@ import numpy as np
 from plotly import graph_objects as go
 from plotly.offline import plot as saveplot
 
+from einsteinpy.plotting.geodesic.static import _bh_2d_coordinates, _bh_3d_coordinates
+
 
 class InteractiveGeodesicPlotter:
     def __init__(self, bh_colors=("#000", "#FFC"), draw_ergosphere=True):
@@ -40,15 +42,7 @@ class InteractiveGeodesicPlotter:
         colorscale_H = [(0, self.bh_colors[0]), (1, self.bh_colors[0])]
         colorscale_E = [(0, self.bh_colors[1]), (1, self.bh_colors[1])]
 
-        theta, phi = np.linspace(0, 2 * np.pi, 50), np.linspace(0, np.pi, 50)
-        THETA, PHI = np.meshgrid(theta, phi)
-
-        # Outer Event Horizon
-        rh_outer = 1 + np.sqrt(1 - a**2)
-
-        XH = rh_outer * np.sin(PHI) * np.cos(THETA)
-        YH = rh_outer * np.sin(PHI) * np.sin(THETA)
-        ZH = rh_outer * np.cos(PHI)
+        (XH, YH, ZH), (XE, YE, ZE) = _bh_3d_coordinates(a)
 
         self.fig.add_trace(
             go.Surface(
@@ -65,12 +59,6 @@ class InteractiveGeodesicPlotter:
 
         # Outer Ergosphere
         if self.draw_ergosphere:
-            rE_outer = 1 + np.sqrt(1 - (a * np.cos(THETA) ** 2))
-
-            XE = rE_outer * np.sin(PHI) * np.sin(THETA)
-            YE = rE_outer * np.sin(PHI) * np.cos(THETA)
-            ZE = rE_outer * np.cos(PHI)
-
             self.fig.add_trace(
                 go.Surface(
                     x=XE,
@@ -98,13 +86,7 @@ class InteractiveGeodesicPlotter:
             Defaults to ``(6, 6)``
 
         """
-        theta = np.linspace(0, 2 * np.pi, 50)
-
-        # Outer Event Horizon
-        rh_outer = 1 + np.sqrt(1 - a**2)
-
-        XH = rh_outer * np.sin(theta)
-        YH = rh_outer * np.cos(theta)
+        (XH, YH), (XE, YE) = _bh_2d_coordinates(a)
 
         self.fig.add_trace(
             go.Scatter(
@@ -120,11 +102,6 @@ class InteractiveGeodesicPlotter:
 
         # Outer Ergosphere
         if self.draw_ergosphere:
-            rE_outer = 1 + np.sqrt(1 - (a * np.cos(theta) ** 2))
-
-            XE = rE_outer * np.sin(theta)
-            YE = rE_outer * np.cos(theta)
-
             self.fig.add_trace(
                 go.Scatter(
                     x=XE,

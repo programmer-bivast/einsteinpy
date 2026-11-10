@@ -1,3 +1,4 @@
+from einsteinpy import constant
 from einsteinpy.coordinates.utils import (
     bl_to_cartesian_fast,
     cartesian_to_bl_fast,
@@ -5,6 +6,8 @@ from einsteinpy.coordinates.utils import (
     spherical_to_cartesian_fast,
 )
 from einsteinpy.metric import BaseMetric
+
+_c = constant.c.value
 
 
 class CartesianConversion:
@@ -45,6 +48,18 @@ class CartesianConversion:
         self._velocities_provided = not (
             (v_x is None) or (v_y is None) or (v_z is None)
         )
+
+    def position(self):
+        """
+        Returns Position 4-Vector in SI units
+
+        Returns
+        -------
+        tuple
+            4-Tuple, containing Position 4-Vector in SI units
+
+        """
+        return (_c * self.t_si, self.x_si, self.y_si, self.z_si)
 
     def values(self):
         """
@@ -191,6 +206,18 @@ class SphericalConversion:
             (v_r is None) or (v_th is None) or (v_p is None)
         )
 
+    def position(self):
+        """
+        Returns Position 4-Vector in SI units
+
+        Returns
+        -------
+        tuple
+            4-Tuple, containing Position 4-Vector in SI units
+
+        """
+        return (_c * self.t_si, self.r_si, self.th_si, self.p_si)
+
     def values(self):
         """
         Returns components of the coordinates
@@ -288,69 +315,11 @@ class SphericalConversion:
         return cart.convert_bl(M=M, a=a)
 
 
-class BoyerLindquistConversion:
+class BoyerLindquistConversion(SphericalConversion):
     """
     Class for conversion to and from Boyer-Lindquist Coordinates in SI units
 
     """
-
-    def __init__(self, t, r, theta, phi, v_r=None, v_th=None, v_p=None):
-        """
-        Constructor
-
-        Parameters
-        ----------
-        t : float
-            Time
-        r : float
-            r-Component of 3-Position
-        theta : float
-            theta-Component of 3-Position
-        phi : float
-            phi-Component of 3-Position
-        v_r : float, optional
-            r-Component of 3-Velocity
-        v_th : float, optional
-            theta-Component of 3-Velocity
-        v_p : float, optional
-            phi-Component of 3-Velocity
-
-        """
-        self.t_si = t
-        self.r_si = r
-        self.th_si = theta
-        self.p_si = phi
-        self.v_r_si = v_r
-        self.v_th_si = v_th
-        self.v_p_si = v_p
-        self._velocities_provided = not (
-            (v_r is None) or (v_th is None) or (v_p is None)
-        )
-
-    def values(self):
-        """
-        Returns components of the coordinates
-
-        Returns
-        -------
-        tuple
-            4-Tuple containing ``t, r, theta, phi`` in SI units
-            or 7-tuple, containing ``t, r, theta, phi, v_r, v_th, v_p`` \
-            in SI units
-
-        """
-        if self._velocities_provided:
-            return (
-                self.t_si,
-                self.r_si,
-                self.th_si,
-                self.p_si,
-                self.v_r_si,
-                self.v_th_si,
-                self.v_p_si,
-            )
-
-        return self.t_si, self.r_si, self.th_si, self.p_si
 
     def convert_cartesian(self, **kwargs):
         """

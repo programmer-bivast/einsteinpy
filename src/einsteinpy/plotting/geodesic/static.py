@@ -7,6 +7,31 @@ from matplotlib.animation import FuncAnimation
 from mpl_toolkits import mplot3d
 
 
+def _bh_3d_coordinates(a):
+    theta, phi = np.linspace(0, 2 * np.pi, 50), np.linspace(0, np.pi, 50)
+    THETA, PHI = np.meshgrid(theta, phi)
+    rh_outer = 1 + np.sqrt(1 - a**2)
+    XH = rh_outer * np.sin(PHI) * np.cos(THETA)
+    YH = rh_outer * np.sin(PHI) * np.sin(THETA)
+    ZH = rh_outer * np.cos(PHI)
+    rE_outer = 1 + np.sqrt(1 - (a * np.cos(THETA) ** 2))
+    XE = rE_outer * np.sin(PHI) * np.sin(THETA)
+    YE = rE_outer * np.sin(PHI) * np.cos(THETA)
+    ZE = rE_outer * np.cos(PHI)
+    return (XH, YH, ZH), (XE, YE, ZE)
+
+
+def _bh_2d_coordinates(a):
+    theta = np.linspace(0, 2 * np.pi, 50)
+    rh_outer = 1 + np.sqrt(1 - a**2)
+    XH = rh_outer * np.sin(theta)
+    YH = rh_outer * np.cos(theta)
+    rE_outer = 1 + np.sqrt(1 - (a * np.cos(theta) ** 2))
+    XE = rE_outer * np.sin(theta)
+    YE = rE_outer * np.cos(theta)
+    return (XH, YH), (XE, YE)
+
+
 class StaticGeodesicPlotter:
     def __init__(self, ax=None, bh_colors=("#000", "#FFC"), draw_ergosphere=True):
         """
@@ -65,15 +90,7 @@ class StaticGeodesicPlotter:
         self.ax.set_ylabel("$Y\\:(GM/c^2)$", fontsize=fontsize)
         self.ax.set_zlabel("$Z\\:(GM/c^2)$", fontsize=fontsize)
 
-        theta, phi = np.linspace(0, 2 * np.pi, 50), np.linspace(0, np.pi, 50)
-        THETA, PHI = np.meshgrid(theta, phi)
-
-        # Outer Event Horizon
-        rh_outer = 1 + np.sqrt(1 - a**2)
-
-        XH = rh_outer * np.sin(PHI) * np.cos(THETA)
-        YH = rh_outer * np.sin(PHI) * np.sin(THETA)
-        ZH = rh_outer * np.cos(PHI)
+        (XH, YH, ZH), (XE, YE, ZE) = _bh_3d_coordinates(a)
 
         surface1 = self.ax.plot_surface(
             XH,
@@ -92,12 +109,6 @@ class StaticGeodesicPlotter:
 
         # Outer Ergosphere
         if self.draw_ergosphere:
-            rE_outer = 1 + np.sqrt(1 - (a * np.cos(THETA) ** 2))
-
-            XE = rE_outer * np.sin(PHI) * np.sin(THETA)
-            YE = rE_outer * np.sin(PHI) * np.cos(THETA)
-            ZE = rE_outer * np.cos(PHI)
-
             surface2 = self.ax.plot_surface(
                 XE,
                 YE,
@@ -130,13 +141,7 @@ class StaticGeodesicPlotter:
         self.fig, self.ax = plt.subplots(figsize=figsize)
         self.fig.set_size_inches(figsize)
 
-        theta = np.linspace(0, 2 * np.pi, 50)
-
-        # Outer Event Horizon
-        rh_outer = 1 + np.sqrt(1 - a**2)
-
-        XH = rh_outer * np.sin(theta)
-        YH = rh_outer * np.cos(theta)
+        (XH, YH), (XE, YE) = _bh_2d_coordinates(a)
 
         self.ax.fill(
             XH, YH, self.bh_colors[0], alpha=0.2, label="BH Event Horizon (Outer)"
@@ -144,11 +149,6 @@ class StaticGeodesicPlotter:
 
         # Outer Ergosphere
         if self.draw_ergosphere:
-            rE_outer = 1 + np.sqrt(1 - (a * np.cos(theta) ** 2))
-
-            XE = rE_outer * np.sin(theta)
-            YE = rE_outer * np.cos(theta)
-
             self.ax.fill(
                 XE, YE, self.bh_colors[1], alpha=0.1, label="BH Ergosphere (Outer)"
             )

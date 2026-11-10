@@ -111,26 +111,3 @@ class MetricTensor(BaseRelativityTensor):
         if self.config == "ll":
             return self
         return self.inv()
-
-    def lorentz_transform(self, transformation_matrix):
-        """
-        Performs a Lorentz transform on the tensor.
-
-        Parameters
-        ----------
-            transformation_matrix : ~sympy.tensor.array.dense_ndim_array.ImmutableDenseNDimArray or list
-                Sympy Array or multi-dimensional list containing Sympy Expressions
-
-        Returns
-        -------
-            ~einsteinpy.symbolic.metric.MetricTensor
-                lorentz transformed tensor
-
-        """
-        t = super(MetricTensor, self).lorentz_transform(transformation_matrix)
-        return MetricTensor(
-            t.tensor(),
-            syms=self.syms,
-            config=self._config,
-            name=_change_name(self.name, context="__lt"),
-        )

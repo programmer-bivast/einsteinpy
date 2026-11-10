@@ -14,6 +14,44 @@ class Kerr(BaseMetric):
 
     """
 
+    # Precomputed list of tuples, containing indices
+    # of non-zero Christoffel Symbols for Kerr & Kerr-Newman Metrics
+    # in Boyer-Lindquist Coordinates
+    _nonzero_christoffels_list_bl = [
+        (0, 0, 1),
+        (0, 0, 2),
+        (0, 1, 3),
+        (0, 2, 3),
+        (0, 1, 0),
+        (0, 2, 0),
+        (0, 3, 1),
+        (0, 3, 2),
+        (1, 0, 0),
+        (1, 1, 1),
+        (1, 2, 2),
+        (1, 3, 3),
+        (2, 0, 0),
+        (2, 1, 1),
+        (2, 2, 2),
+        (2, 3, 3),
+        (1, 0, 3),
+        (1, 1, 2),
+        (2, 0, 3),
+        (2, 1, 2),
+        (1, 2, 1),
+        (1, 3, 0),
+        (2, 2, 1),
+        (2, 3, 0),
+        (3, 0, 1),
+        (3, 0, 2),
+        (3, 1, 0),
+        (3, 1, 3),
+        (3, 2, 0),
+        (3, 2, 3),
+        (3, 3, 1),
+        (3, 3, 2),
+    ]
+
     @u.quantity_input(M=u.kg, a=u.one)
     def __init__(self, coords, M, a):
         """
@@ -38,43 +76,6 @@ class Kerr(BaseMetric):
             christoffels=self._christoffels,
             f_vec=self._f_vec,
         )
-        # Precomputed list of tuples, containing indices \
-        # of non-zero Christoffel Symbols for Kerr Metric \
-        # in Boyer-Lindquist Coordinates
-        self._nonzero_christoffels_list_bl = [
-            (0, 0, 1),
-            (0, 0, 2),
-            (0, 1, 3),
-            (0, 2, 3),
-            (0, 1, 0),
-            (0, 2, 0),
-            (0, 3, 1),
-            (0, 3, 2),
-            (1, 0, 0),
-            (1, 1, 1),
-            (1, 2, 2),
-            (1, 3, 3),
-            (2, 0, 0),
-            (2, 1, 1),
-            (2, 2, 2),
-            (2, 3, 3),
-            (1, 0, 3),
-            (1, 1, 2),
-            (2, 0, 3),
-            (2, 1, 2),
-            (1, 2, 1),
-            (1, 3, 0),
-            (2, 2, 1),
-            (2, 3, 0),
-            (3, 0, 1),
-            (3, 0, 2),
-            (3, 1, 0),
-            (3, 1, 3),
-            (3, 2, 0),
-            (3, 2, 3),
-            (3, 3, 1),
-            (3, 3, 2),
-        ]
 
     def metric_covariant(self, x_vec):
         """
@@ -103,7 +104,7 @@ class Kerr(BaseMetric):
             return self._g_cov_bl(x_vec)
 
         raise CoordinateError(
-            "Kerr Metric is available only in Boyer-Lindquist Coordinates."
+            f"{self.name} is available only in Boyer-Lindquist Coordinates."
         )
 
     def _g_cov_bl(self, x_vec):
@@ -238,7 +239,7 @@ class Kerr(BaseMetric):
             return self._ch_sym_bl(x_vec)
 
         raise CoordinateError(
-            "Christoffel Symbols for Kerr Metric are available only in Boyer-Lindquist Coordinates."
+            f"Christoffel Symbols for {self.name} are available only in Boyer-Lindquist Coordinates."
         )
 
     def _ch_sym_bl(self, x_vec):
@@ -315,7 +316,7 @@ class Kerr(BaseMetric):
             return self._f_vec_bl(lambda_, vec)
 
         raise CoordinateError(
-            "'f_vec' for Kerr Metric is available only in Boyer-Lindquist Coordinates."
+            f"'f_vec' for {self.name} is available only in Boyer-Lindquist Coordinates."
         )
 
     def _f_vec_bl(self, lambda_, vec):

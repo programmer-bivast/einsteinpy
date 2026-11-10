@@ -50,33 +50,28 @@ class Shadow:
         # emath.sqrt is domain-agnostic and this is a complex equation
         return r_tp / np.emath.sqrt(1 - (2 * int(self.mass.value) / r_tp)) - i
 
+    def _intensity_integrand(self, r, b, sign):
+        GTT = 1 - (2 * self.mass.value / r)
+        GRR = GTT ** (-1)
+        KRKText = ((GTT / GRR) * (1 - (b**2 * GTT / (r**2)))) ** 0.5
+        G_val = (
+            (1 / GTT) + sign * KRKText * (GRR / GTT) * ((1 - GTT) / (GTT * GRR)) ** 0.5
+        ) ** (-1)
+        return sign * (G_val**3) * (GTT / (r**2)) * (1 / KRKText)
+
     def _intensity_blue_sch(self, r, b):
         """
         Returns the integrand for the blue shifted intensity to be integrated.
         Reference : Cosimo Bambi, 10.1103/PhysRevD.87.107501
         """
-        GTT = 1 - (2 * self.mass.value / r)
-        GRR = (1 - (2 * self.mass.value / r)) ** (-1)
-        KRKText = ((GTT / GRR) * (1 - (b**2 * GTT / (r**2)))) ** 0.5
-        Gblue = (
-            (1 / GTT) - KRKText * (GRR / GTT) * ((1 - GTT) / (GTT * GRR)) ** 0.5
-        ) ** (-1)
-        Iblue = -(Gblue**3) * (GTT / (r**2)) * (1 / KRKText)
-        return Iblue
+        return self._intensity_integrand(r, b, -1)
 
     def _intensity_red_sch(self, r, b):
         """
         Returns the integrand for the red shifted intensity to be integrated.
         Reference : Cosimo Bambi, 10.1103/PhysRevD.87.107501
         """
-        GTT = 1 - (2 * self.mass.value / r)
-        GRR = (1 - (2 * self.mass.value / r)) ** (-1)
-        KRKText = ((GTT / GRR) * (1 - (b**2 * GTT / (r**2)))) ** 0.5
-        Gred = (
-            (1 / GTT) + KRKText * (GRR / GTT) * ((1 - GTT) / (GTT * GRR)) ** 0.5
-        ) ** (-1)
-        Ired = (Gred**3) * (GTT / (r**2)) * (1 / KRKText)
-        return Ired
+        return self._intensity_integrand(r, b, 1)
 
     def _intensity(self):
         """
